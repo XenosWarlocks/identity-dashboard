@@ -1,93 +1,66 @@
 // src/store/identity.js
-import axios from 'axios';
+import { defineStore } from 'pinia'
+import { createIdentity, getIdentities, createGmailAccount } from '../api/identity'
 
-export default {
-    namespaced: true,
-    state: {
-        identity: null,
-        generationStatus: 'idle', // idle, generating, completed, error
-        logs: [],
-        settings: {
-            culture: 'christian',
-            passwordLength: 16,
-            headless: false,
-            recoveryEmail: '',
-            recoveryPhone: ''
-        },
-        availableCultures: [
-            { value: 'christian', label: 'Christian' },
-            { value: 'jewish', label: 'Jewish' },
-            { value: 'hindu', label: 'Hindu' },
-            { value: 'arabic', label: 'Arabic' },
-            { value: 'chinese', label: 'Chinese' },
-            { value: 'japanese', label: 'Japanese' }
-        ]
-    },
-    mutations: {
-        SET_IDENTITY(state, identity) {
-            state.identity = identity;
-        },
-        SET_GENERATION_STATUS(state, status) {
-            state.generationStatus = status;
-        },
-        ADD_LOG(state, message) {
-            state.logs.push({
-                timestamp: new Date().toISOString(),
-                message
-            });
-        },
-        UPDATE_SETTINGS(state, settings) {
-            state.settings = { ...state.settings, ...settings };
-        },
-        CLEAR_LOGS(state) {
-            state.logs = [];
-        }
-    },
+export const useIdentityStore = defineStore('identity', {
+    state: () => ({
+        identities: [],
+        loading: false,
+        error: null,
+        currentOperation: null
+    }),
+
     actions: {
-        async generateIdentity({ commit, state }) {
+        async fetchIdentities() {
             try {
-                commit('SET_GENERATION_STATUS', 'generating');
-                commit('ADD_LOG', 'Starting identity generation...');
-
-                const response = await axios.post('/api/generate-identity', state.settings);
-                commit('SET_IDENTITY', response.data);
-                commit('ADD_LOG', 'Identity generated successfully');
-                commit('SET_GENERATION_STATUS', 'completed');
-                
-                return response.data;
-            } catch (error) {
-                commit('ADD_LOG', `Error generating identity: ${error.message}`);
-                commit('SET_GENERATION_STATUS', 'error');
-                throw error;
-            }
-        },
-        async createGmailAccount({ commit, state }) {
-            try {
-                commit('SET_GENERATION_STATUS', 'generating');
-                commit('ADD_LOG', 'Starting Gmail account creation...');
-                
-                const response = await axios.post('/api/create-gmail', {
-                    ...state.settings,
-                    identity: state.identity
-                });
-
-                commit('ADD_LOG', 'Gmail account creation initiated');
-                commit('SET_GENERATION_STATUS', 'completed');
-                
-                return response.data;
-            } catch (error) {
-                commit('ADD_LOG', `Error creating Gmail account: ${error.message}`);
-                commit('SET_GENERATION_STATUS', 'error');
-                throw error;
+                this.loading = true
+                this.error = null
+                const response = await getIdentities()
+                this.identities = response.data
+            } catch (err) {
+                this.error = err.message
+            } finally {
+                this.loading = false
             }
         },
 
-        updateSettings({ commit }, settings) {
-            commit('UPDATE_SETTINGS', settings);
-            commit('ADD_LOG', 'Settings updated');
+        async generateIdentity(culture) {
+            try {
+                this.loading = true
+                this.error = null
+                this.currentOperation = 'generating'
+                const response = await createIdentity({ culture })
+                this.identities.push(response.data)
+                return response.data
+            } catch (err) {
+                this.error = err.message
+                throw err
+            } finally {
+                this.loading = false
+                this.currentOperation = null
+            }
         },
-        clearLogs({ commit }) {
-            commit('CLEAR_LOGS');
+
+        async createGmailAccount(identityId, options = {}) {
+            try {
+                this.loading = true
+                this.error = null
+                this.currentOperation = 'creating-gmail'
+                const response = await createGmailAccount(identityId, options)
+                
+                // Update the identity in the store with Gmail account details
+                const index = this.identities.findIndex(i => i.id === identityId)
+                if (index !== -1) {
+                    this.identities[index] = { ...this.identities[index], ...response.data }
+                }
+                return response.data
+            } catch (err) {
+                this.error = err.message
+                throw err
+            } finally {
+                this.loading = false
+                this.currentOperation = null
+            }
         }
     }
-}
+})
