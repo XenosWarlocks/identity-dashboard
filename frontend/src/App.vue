@@ -1,3 +1,4 @@
+<!-- App.vue -->
 <template>
   <div class="min-h-screen bg-gray-100">
     <header class="bg-white shadow">
@@ -23,8 +24,8 @@
 
 <script>
 
-import IdentityForm from './components/IdentityForm.vue'
-import IdentityList from './components/IdentityList.vue'
+import IdentityForm from '../components/IdentityForm.vue'
+import IdentityList from '../components/IdentityList.vue'
 
 export default {
   name: 'App',

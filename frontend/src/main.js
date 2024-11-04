@@ -1,14 +1,12 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import App from './App.vue'
-import './style.css'
+// main.js
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+import './style.css';
 
-// Create Vue app
-const app = createApp(App)
+const app = createApp(App);
 
-// Create and use Pinia store
-const pinia = createPinia()
-app.use(pinia)
-
-// Mount app
-app.mount('#app')
+const pinia = createPinia();
+app.use(pinia);
+entry: path.resolve(__dirname, 'frontend/src/main.js'),
+app.mount('#app');
